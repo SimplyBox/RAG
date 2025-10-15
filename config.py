@@ -8,8 +8,8 @@ load_dotenv()
 class AgenticRAGConfig:
     """Configuration class for Multi-tenant Agentic RAG system"""
     # API Keys
-    PINECONE_API_KEY: str = os.getenv("PINECONE_API_KEY")
-    GROQ_API_KEY: str = os.getenv("GROQ_API_KEY")
+    PINECONE_API_KEY: str = os.getenv("PINECONE_API_KEY", "")
+    GROQ_API_KEY: str = os.getenv("GROQ_API_KEY", "")
     
     # Multi-tenant settings
     tenant_id: str = "company_A"
@@ -56,8 +56,16 @@ class AgenticRAGConfig:
     @classmethod
     def from_env(cls, tenant_id: str = "company_A"):
         """Create config from environment variables with tenant ID"""
+        pinecone_api_key = os.getenv("PINECONE_API_KEY", "")
+        groq_api_key = os.getenv("GROQ_API_KEY", "")
+        
+        if not pinecone_api_key:
+            raise ValueError("PINECONE_API_KEY is required but not set in environment variables.")
+        if not groq_api_key:
+            raise ValueError("GROQ_API_KEY is required but not set in environment variables.")
+        
         return cls(
-            PINECONE_API_KEY=os.getenv("PINECONE_API_KEY", cls.PINECONE_API_KEY),
-            GROQ_API_KEY=os.getenv("GROQ_API_KEY", cls.GROQ_API_KEY),
+            PINECONE_API_KEY=pinecone_api_key,
+            GROQ_API_KEY=groq_api_key,
             tenant_id=tenant_id
         )
