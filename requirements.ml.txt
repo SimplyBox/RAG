@@ -1,9 +1,9 @@
-# LlamaIndex core + plugins
-llama-index-core==0.10.64
+# LlamaIndex ecosystem (keep versions mutually compatible)
+llama-index-core>=0.13.0,<0.15
+llama-index-embeddings-huggingface>=0.6.0,<0.7
 llama-index-vector-stores-pinecone>=0.7.0,<0.8
-llama-index-embeddings-huggingface==0.6.1
 llama-index-llms-groq>=0.4.0,<0.5
-llama-index-readers-file==0.1.12
+llama-index-readers-file>=0.1.12,<0.2
 
 # Pinecone
 pinecone-client==3.2.2
