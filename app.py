@@ -300,7 +300,7 @@ async def root():
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(
-        "api_service:app",
+        "app:app",
         host="0.0.0.0",
         port=int(os.getenv("PORT", 8000)),
         reload=True,
