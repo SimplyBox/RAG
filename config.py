@@ -12,7 +12,7 @@ class AgenticRAGConfig:
     GROQ_API_KEY: str = os.getenv("GROQ_API_KEY", "")
     
     # Multi-tenant settings
-    tenant_id: str = "company_A"
+    tenant_id: str = "SimplyBox"
     
     # Chunking parameters
     base_chunk_size: int = 600
