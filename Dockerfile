@@ -75,7 +75,7 @@ COPY . .
 
 EXPOSE 8000
 HEALTHCHECK --interval=30s --timeout=3s \
-  CMD curl -fsS http://localhost:${PORT:-8000}/health || exit 1
+  CMD curl -fsS http://localhost:8000/health || exit 1
 
 # 1 worker is safer on basic-xxs; bump later if you scale the plan
-CMD ["uvicorn","app:app","--host","0.0.0.0","--port","${PORT}","--workers","2","--log-level","info"]
+CMD ["uvicorn","app:app","--host","0.0.0.0","--port","8000","--workers","2","--log-level","info"]
