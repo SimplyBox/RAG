@@ -40,10 +40,11 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # Create venv and install deps in layers to leverage caching
 RUN python -m venv /opt/venv
 ENV PATH="/opt/venv/bin:$PATH"
+RUN pip install --upgrade pip setuptools wheel
 
 # 1) Base first
 COPY requirements.base.txt .
-RUN pip install --upgrade pip && pip install -r requirements.base.txt
+RUN pip install -r requirements.base.txt
 
 # 2) CPU torch
 COPY requirements.torch.txt .
