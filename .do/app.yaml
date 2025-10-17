@@ -22,6 +22,8 @@ services:
           - key: PORT
             scope: RUN_TIME
             value: "8000"
+    - name: shell
+      run_command: sleep infinity
 routes:
     - path: /
       service_name: web
