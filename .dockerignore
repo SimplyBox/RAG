@@ -17,21 +17,3 @@ dist/
 
 .vscode/
 .idea/
-
-.git
-**/__pycache__/
-env
-node_modules
-dist
-build
-*.log
-.env
-.DS_Store
-.cache
-.huggingface
-.transformers
-data
-datasets
-models
-checkpoints
-**/*.ipynb
