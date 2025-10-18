@@ -25,9 +25,11 @@ RUN pip install -r requirements.torch.txt
 COPY requirements.ml.txt .
 RUN pip install -r requirements.ml.txt
 
+RUN python -c "print('deps installed OK')"
 # ---- Vendor the SBERT model (offline) ----
 # We put it outside /app to avoid accidental COPY over
 RUN mkdir -p /models/sbert
+
 RUN curl -I https://huggingface.co  
 # should return 200/301
 # No symlinks so it layers/copies cleanly
