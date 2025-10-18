@@ -25,6 +25,21 @@ RUN pip install -r requirements.torch.txt
 COPY requirements.ml.txt .
 RUN pip install -r requirements.ml.txt
 
+# ---- Vendor the SBERT model (offline) ----
+# We put it outside /app to avoid accidental COPY over
+RUN mkdir -p /models/sbert
+# No symlinks so it layers/copies cleanly
+RUN python - <<'PY'
+from huggingface_hub import snapshot_download
+snapshot_download(
+    repo_id="sentence-transformers/all-MiniLM-L6-v2",
+    local_dir="/models/sbert/all-MiniLM-L6-v2",
+    local_dir_use_symlinks=False,
+    resume_download=True,
+)
+print("Vendored SBERT to /models/sbert/all-MiniLM-L6-v2")
+PY
+
 # Copy source last (benefits from .dockerignore)
 COPY . .
 
@@ -33,16 +48,21 @@ FROM python:3.11-slim
 ENV PIP_NO_CACHE_DIR=1 PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1 \
     PATH="/opt/venv/bin:$PATH" \
     # optional: keep HF cache small / inside container
-    HF_HOME="/tmp/hf"
+    HF_HOME="/models/hf-cache" \
+    # force offline HF so no network calls at runtime
+    HF_HUB_OFFLINE=1 \
+    # app will read this to load embeddings by PATH
+    EMBED_MODEL_LOCAL_PATH="/models/sbert/all-MiniLM-L6-v2"
 
 WORKDIR /app
 RUN apt-get update && apt-get install -y --no-install-recommends \
     libgomp1 poppler-utils curl \
  && rm -rf /var/lib/apt/lists/*
 
-# Bring in venv & app
+# Bring venv, vendored model, and app
 COPY --from=builder /opt/venv /opt/venv
-COPY . .
+COPY --from=builder /models/sbert /models/sbert
+COPY --from=builder /app /app
 
 EXPOSE 8000
 HEALTHCHECK --interval=30s --timeout=3s \
