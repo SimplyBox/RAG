@@ -1,3 +1,4 @@
+import os
 import numpy as np
 from typing import List
 from sklearn.metrics.pairwise import cosine_similarity
@@ -6,8 +7,10 @@ from sentence_transformers import SentenceTransformer
 class SemanticAnalyzer:
     """Handles semantic analysis and grouping of text units"""
     
-    def __init__(self, model_name: str = "sentence-transformers/all-MiniLM-L6-v2"):
-        self.sentence_model = SentenceTransformer(model_name)
+    def __init__(self, model_name: str | None = None):
+        local_path = os.environ.get("EMBED_MODEL_LOCAL_PATH")
+        self.model_id_or_path = local_path or model_name or "sentence-transformers/all-MiniLM-L6-v2"
+        self.sentence_model = SentenceTransformer(self.model_id_or_path)
     
     def calculate_semantic_similarity(self, units: List[str]) -> np.ndarray:
         """Calculate semantic similarity matrix between units"""
