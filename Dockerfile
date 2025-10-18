@@ -1,16 +1,11 @@
-# syntax=docker/dockerfile:1.7
-
-############################
-# Global cache buster (helps dodge flaky remote cache layers)
-############################
-ARG CACHE_BUSTER=0
-RUN echo "cache-buster=${CACHE_BUSTER}"
-
-
 # ---------- Build stage ----------
 FROM python:3.11-slim AS builder
 ENV PIP_NO_CACHE_DIR=1 PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1
 WORKDIR /app
+
+# Optional cache-buster to invalidate flaky remote cached layers
+ARG CACHE_BUSTER=0
+RUN echo "cache-buster=${CACHE_BUSTER}"
 
 # Minimal build tools (only if needed for wheels)
 ARG APT_SIG=0
