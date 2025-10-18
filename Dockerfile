@@ -1,3 +1,12 @@
+# syntax=docker/dockerfile:1.7
+
+############################
+# Global cache buster (helps dodge flaky remote cache layers)
+############################
+ARG CACHE_BUSTER=0
+RUN echo "cache-buster=${CACHE_BUSTER}"
+
+
 # ---------- Build stage ----------
 FROM python:3.11-slim AS builder
 ENV PIP_NO_CACHE_DIR=1 PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1
@@ -27,33 +36,21 @@ COPY requirements.ml.txt .
 RUN pip install -r requirements.ml.txt
 
 RUN python -c "print('deps installed OK')"
-# ---- Vendor the SBERT model (offline) ----
-# We put it outside /app to avoid accidental COPY over
-RUN mkdir -p /models/hf-cache
-RUN mkdir -p /models/sbert
+# Prepare model dirs
+RUN mkdir -p /models/hf-cache /models/sbert
 
-# Optional: pin a specific commit for deterministic builds
+# Copy the fetch script (no heredocs; safe on DO builder)
+COPY scripts/fetch_models.py /tmp/fetch_models.py
+
+# Optional: pin a specific commit for deterministic builds (set via build arg)
 ARG SBERT_REV=main
-ENV PATH="/opt/venv/bin:${PATH}"
+ENV SBERT_REV=${SBERT_REV}
 
-RUN python - <<'PY'
-import urllib.request
-with urllib.request.urlopen("https://huggingface.co", timeout=10) as r:
-    print("HuggingFace reachable:", r.status)
-PY
-
-# No symlinks so it layers/copies cleanly
-RUN python - <<'PY'
-from huggingface_hub import snapshot_download
-snapshot_download(
-    repo_id="sentence-transformers/all-MiniLM-L6-v2",
-    local_dir="/models/sbert/all-MiniLM-L6-v2",
-    local_dir_use_symlinks=False,
-    resume_download=True,
-    force_download=True
-)
-print("Vendored SBERT to /models/sbert/all-MiniLM-L6-v2")
-PY
+# Cache hub data between builds; verbose download; fail-fast if empty
+RUN --mount=type=cache,target=/root/.cache/huggingface \
+    HUGGINGFACE_HUB_VERBOSITY=debug \
+    python -u /tmp/fetch_models.py && \
+    ls -lah /models/sbert/all-MiniLM-L6-v2 | sed -n '1,80p'
 
 # Copy source last (benefits from .dockerignore)
 COPY . .
@@ -84,4 +81,4 @@ HEALTHCHECK --interval=30s --timeout=3s \
   CMD curl -fsS http://localhost:8000/health || exit 1
 
 # 1 worker is safer on basic-xxs; bump later if you scale the plan
-CMD ["uvicorn","app:app","--host","0.0.0.0","--port","8000","--workers","2","--log-level","info"]
+CMD ["uvicorn","app:app","--host","0.0.0.0","--port","8000","--workers","1","--log-level","info"]
