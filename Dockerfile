@@ -35,7 +35,7 @@ RUN python -c "print('deps installed OK')"
 RUN mkdir -p /models/hf-cache /models/sbert
 
 # Copy the fetch script (no heredocs; safe on DO builder)
-COPY scripts/fetch_models.py /tmp/fetch_models.py
+COPY scripts/fetch_model.py /tmp/fetch_model.py
 
 # Optional: pin a specific commit for deterministic builds (set via build arg)
 ARG SBERT_REV=main
@@ -44,7 +44,7 @@ ENV SBERT_REV=${SBERT_REV}
 # Cache hub data between builds; verbose download; fail-fast if empty
 RUN --mount=type=cache,target=/root/.cache/huggingface \
     HUGGINGFACE_HUB_VERBOSITY=debug \
-    python -u /tmp/fetch_models.py && \
+    python -u /tmp/fetch_model.py && \
     ls -lah /models/sbert/all-MiniLM-L6-v2 | sed -n '1,80p'
 
 # Copy source last (benefits from .dockerignore)
