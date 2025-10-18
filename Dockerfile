@@ -4,8 +4,9 @@ ENV PIP_NO_CACHE_DIR=1 PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1
 WORKDIR /app
 
 # Minimal build tools (only if needed for wheels)
+ARG APT_SIG=0
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    gcc g++ libgomp1 poppler-utils \
+    gcc g++ libgomp1 poppler-utils ca-certificates \
  && rm -rf /var/lib/apt/lists/*
 
 # Create venv and install deps in layers to leverage caching
@@ -28,7 +29,12 @@ RUN pip install -r requirements.ml.txt
 RUN python -c "print('deps installed OK')"
 # ---- Vendor the SBERT model (offline) ----
 # We put it outside /app to avoid accidental COPY over
+RUN mkdir -p /models/hf-cache
 RUN mkdir -p /models/sbert
+
+# Optional: pin a specific commit for deterministic builds
+ARG SBERT_REV=main
+ENV PATH="/opt/venv/bin:${PATH}"
 
 RUN python - <<'PY'
 import urllib.request
@@ -65,7 +71,7 @@ ENV PIP_NO_CACHE_DIR=1 PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1 \
 
 WORKDIR /app
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    libgomp1 poppler-utils curl \
+    libgomp1 poppler-utils curl ca-certificates \
  && rm -rf /var/lib/apt/lists/*
 
 # Bring venv, vendored model, and app
