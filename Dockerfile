@@ -28,6 +28,8 @@ RUN pip install -r requirements.ml.txt
 # ---- Vendor the SBERT model (offline) ----
 # We put it outside /app to avoid accidental COPY over
 RUN mkdir -p /models/sbert
+RUN curl -I https://huggingface.co  
+# should return 200/301
 # No symlinks so it layers/copies cleanly
 RUN python - <<'PY'
 from huggingface_hub import snapshot_download
@@ -36,6 +38,7 @@ snapshot_download(
     local_dir="/models/sbert/all-MiniLM-L6-v2",
     local_dir_use_symlinks=False,
     resume_download=True,
+    force_download=True
 )
 print("Vendored SBERT to /models/sbert/all-MiniLM-L6-v2")
 PY
