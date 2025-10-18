@@ -1,0 +1,35 @@
+# docker compose up -d --build
+# docker compose logs -f web
+# version: "3.9"
+
+services:
+  web:
+    build: .
+    container_name: app-web
+    ports:
+      - "8000:8000"
+    environment:
+      PINECONE_API_KEY: ${PINECONE_API_KEY}
+      GROQ_API_KEY: ${GROQ_API_KEY}
+      PORT: 8000
+      HF_HOME: /tmp/hf
+      TRANSFORMERS_CACHE: /tmp/hf
+      SENTENCE_TRANSFORMERS_HOME: /tmp/stcache
+      HF_HUB_ENABLE_HF_TRANSFER: 1
+    volumes:
+      # (optional) cache model downloads across restarts
+      - hf_cache:/tmp/hf
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:${PORT:-8000}/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+    command: >
+      uvicorn app:app
+      --host 0.0.0.0
+      --port ${PORT:-8000}
+      --workers 1
+      --timeout-keep-alive 5
+
+volumes:
+  hf_cache:
