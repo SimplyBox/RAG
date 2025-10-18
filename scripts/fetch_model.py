@@ -16,16 +16,16 @@ local = snapshot_download(
     repo_id=REPO,
     revision=REV,
     local_dir=DEST,
-    allow_patterns=[
-        "*.safetensors",
-        "config.json",
-        "config_sentence_transformers.json",
-        "modules.json",
-        "data_config.json",
-        "tokenizer.*",
-        "vocab*",
-        "*.txt",
-    ],
+    # allow_patterns=[
+    #     "*.safetensors",
+    #     "config.json",
+    #     "config_sentence_transformers.json",
+    #     "modules.json",
+    #     "data_config.json",
+    #     "tokenizer.*",
+    #     "vocab*",
+    #     "*.txt",
+    # ],
 )
 
 files = [p for p in glob.glob(local + "/**/*", recursive=True) if os.path.isfile(p)]
