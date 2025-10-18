@@ -34,7 +34,8 @@ class AgenticRAGConfig:
     request_timeout: float = 120.0
     
     # Embedding model
-    embedding_model: str = "sentence-transformers/all-MiniLM-L6-v2"
+    # embedding_model: str = "sentence-transformers/all-MiniLM-L6-v2"
+    embedding_model: str = "/models/sbert/all-MiniLM-L6-v2"
     
     # Retrieval settings
     similarity_top_k: int = 7
