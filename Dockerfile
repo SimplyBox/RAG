@@ -30,8 +30,12 @@ RUN python -c "print('deps installed OK')"
 # We put it outside /app to avoid accidental COPY over
 RUN mkdir -p /models/sbert
 
-RUN curl -I https://huggingface.co  
-# should return 200/301
+RUN python - <<'PY'
+import urllib.request
+with urllib.request.urlopen("https://huggingface.co", timeout=10) as r:
+    print("HuggingFace reachable:", r.status)
+PY
+
 # No symlinks so it layers/copies cleanly
 RUN python - <<'PY'
 from huggingface_hub import snapshot_download
