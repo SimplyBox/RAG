@@ -29,6 +29,7 @@ class AgenticRAGConfig:
     
     # LLM settings
     model_name: str = "llama-3.3-70b-versatile"
+    MAVERICK_MODEL_NAME: str = "meta-llama/llama-4-maverick-17b-128e-instruct"
     temperature: float = 0.1
     max_tokens: int = 2048
     request_timeout: float = 120.0

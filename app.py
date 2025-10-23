@@ -28,6 +28,11 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+class AnalyzeImageRequest(BaseModel):
+    company_id: str
+    image_url: str
+    caption: Optional[str] = None
+
 class IngestRequest(BaseModel):
     company_id: str
     category: Optional[str] = "General"
@@ -202,6 +207,39 @@ async def query_documents(request: QueryRequest):
     except Exception as e:
         logger.error(f"Error processing query for company {request.company_id}: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Error processing query: {str(e)}")
+    
+@app.post("/analyze_image", response_model=Dict[str, Any])
+async def analyze_image_endpoint(request: AnalyzeImageRequest):
+    """
+    Analyze an image using the 'Maverick' vision model
+    """
+    if not request.company_id:
+        raise HTTPException(status_code=400, detail="company_id is required")
+    if not request.image_url:
+        raise HTTPException(status_code=400, detail="image_url is required")
+    
+    try:
+        rag = get_rag_instance(request.company_id)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    
+    try:
+        logger.info(f"Processing image analysis for company {request.company_id}...")
+        
+        analysis_text = rag.analyze_image_with_maverick(request.image_url, request.caption)
+        
+        logger.info(f"Successfully generated image analysis for company {request.company_id}")
+        
+        return {
+            "success": True,
+            "analysis": analysis_text,
+            "company_id": request.company_id,
+            "timestamp": datetime.now().isoformat()
+        }
+        
+    except Exception as e:
+        logger.error(f"Error processing image analysis for {request.company_id}: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Error processing image: {str(e)}")
 
 @app.get("/categories")
 async def get_categories():

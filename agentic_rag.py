@@ -29,7 +29,7 @@ class AgenticRAG:
             base_chunk_size, overlap, min_chunk_size, max_chunk_size
         )
         self.vector_store_manager = VectorStoreManager(self.config)
-        self.query_processor = QueryProcessor()
+        self.query_processor = QueryProcessor(self.config)
 
     def upload_pdf(self, pdf_path: str, category: str = "General", original_filename: str = None) -> str:
         """Upload PDF to vector store with agentic chunking and multi-tenant support"""        
@@ -82,6 +82,13 @@ class AgenticRAG:
             if "rate limit" in str(e).lower() or "429" in str(e):
                 return "Terlalu banyak permintaan. Silakan tunggu beberapa detik dan coba lagi."
             return f"Terjadi kesalahan saat memproses pertanyaan: {str(e)}"
+        
+    def analyze_image_with_maverick(self, image_url: str, caption: str | None) -> str:
+        """Panggil vision processor ('Maverick') untuk menganalisis gambar."""
+        if not image_url:
+            raise ValueError("Image URL is required for analysis")
+        
+        return self.query_processor.analyze_image(image_url, caption)
         
     def delete_file(self, file_name: str) -> str:
         """Delete all chunks associated with a specific file for the current tenant"""
