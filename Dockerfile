@@ -42,7 +42,7 @@ ARG SBERT_REV=main
 ENV SBERT_REV=${SBERT_REV}
 
 # Cache hub data between builds; verbose download; fail-fast if empty
-RUN --mount=type=cache,id=s/ee3d0353-636a-4357-a00c-5de9422b8687-/root/.cache/huggingface,target=/root/.cache/huggingface \
+RUN --mount=type=cache,id=s/35a544df-5187-48e2-9b81-6d9e5ad6e0e1-/root/.cache/huggingface,target=/root/.cache/huggingface \
     HUGGINGFACE_HUB_VERBOSITY=debug \
     python -u /tmp/fetch_model.py && \
     ls -lah /models/sbert/all-MiniLM-L6-v2 | sed -n '1,80p'
