@@ -78,6 +78,12 @@ INSTRUKSI PENTING:
 - Berikan contoh konkret jika tersedia dalam konteks
 - Prioritaskan memberikan solusi yang actionable
 
+INSTRUKSI KHUSUS UNTUK GAMBAR:
+- Riwayat chat mungkin berisi analisis gambar dalam format '(Analisis AI: ...)'.
+- Teks ini adalah deskripsi dari gambar yang diunggah user. ANDA HARUS MENGGUNAKANNYA sebagai konteks.
+- JANGAN PERNAH mengatakan 'Saya tidak bisa melihat gambar'. Anggap teks '(Analisis AI: ...)' adalah mata Anda.
+- Jika user bertanya tentang gambar yang baru dianalisis, gunakan teks analisis itu untuk menjawab.
+
 KNOWLEDGE BASE PERUSAHAAN ({tenant_id}):
 {context_text}
 
