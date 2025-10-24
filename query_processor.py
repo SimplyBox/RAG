@@ -1,7 +1,6 @@
 import time
 from typing import List
 from llama_index.llms.groq import Groq
-from llama_index.core.multi_modal_llms.generic_utils import load_image_urls
 from groq_vision_wrapper import GroqVisionWrapper
 from config import AgenticRAGConfig
 
@@ -13,11 +12,6 @@ class QueryProcessor:
         try:
             self.text_llm = Groq(
                 model=config.model_name,
-                api_key=config.GROQ_API_KEY,
-                request_timeout=config.request_timeout
-            )
-            self.vision_llm = Groq(
-                model=config.MAVERICK_MODEL_NAME,
                 api_key=config.GROQ_API_KEY,
                 request_timeout=config.request_timeout
             )
@@ -37,8 +31,6 @@ class QueryProcessor:
             return "[Error: Vision agent (Maverick) not initialized.]"
             
         try:
-            image_documents = load_image_urls([image_url])
-            
             user_prompt = "Analyze this image concisely."
             if caption:
                 user_prompt = f"User uploaded this image with the caption: '{caption}'. Analyze the image based on this context."
@@ -51,9 +43,10 @@ Example: 'Analysis: A minimalist UI/UX design portfolio for a mobile app, dark m
 
 Generate only the analysis text."""
             
+            # UBAH PANGGILAN FUNGSI INI:
             response = self.vision_llm.complete(
                 prompt=f"{system_prompt}\n\n{user_prompt}",
-                image_documents=image_documents
+                image_url=image_url
             )
             
             return str(response).strip()
