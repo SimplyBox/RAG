@@ -2,6 +2,7 @@ import time
 from typing import List
 from llama_index.llms.groq import Groq
 from llama_index.core.multi_modal_llms.generic_utils import load_image_urls
+from groq_vision_wrapper import GroqVisionWrapper
 from config import AgenticRAGConfig
 
 class QueryProcessor:
@@ -19,6 +20,10 @@ class QueryProcessor:
                 model=config.MAVERICK_MODEL_NAME,
                 api_key=config.GROQ_API_KEY,
                 request_timeout=config.request_timeout
+            )
+            self.vision_llm = GroqVisionWrapper(
+                api_key=config.GROQ_API_KEY,
+                model=config.MAVERICK_MODEL_NAME
             )
             print(f"Text agent initialized ({config.model_name})")
             print(f"Vision 'Maverick' agent initialized ({config.MAVERICK_MODEL_NAME})")
