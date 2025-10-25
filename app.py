@@ -40,6 +40,7 @@ class IngestRequest(BaseModel):
 class QueryRequest(BaseModel):
     company_id: str
     question: str
+    persona_prompt: Optional[str] = None
 
 class IngestResponse(BaseModel):
     success: bool
@@ -177,6 +178,7 @@ async def query_documents(request: QueryRequest):
     
     - **company_id**: Company identifier
     - **question**: Question to ask
+    - **persona_prompt**: (Optional) Custom persona string
     """
     
     if not request.company_id or not request.company_id.strip():
@@ -193,7 +195,7 @@ async def query_documents(request: QueryRequest):
     try:
         logger.info(f"Processing query for company {request.company_id}: {request.question}")
         
-        answer = rag.ask(request.question)
+        answer = rag.ask(request.question, request.persona_prompt)
         
         logger.info(f"Successfully generated answer for company {request.company_id}")
         

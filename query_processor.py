@@ -1,5 +1,5 @@
 import time
-from typing import List
+from typing import List, Optional
 from llama_index.llms.groq import Groq
 from groq_vision_wrapper import GroqVisionWrapper
 from config import AgenticRAGConfig
@@ -55,7 +55,7 @@ Generate only the analysis text."""
             print(f"Error during image analysis: {e}")
             return f"[Error analyzing image: {e}]"
 
-    def generate_response(self, question: str, relevant_chunks: List[str], tenant_id: str) -> str:
+    def generate_response(self, question: str, relevant_chunks: List[str], tenant_id: str, persona_prompt: Optional[str] = None) -> str:
         """Generate response based on question and relevant chunks for specific tenant"""
         if not question.strip():
             return "Silakan ajukan pertanyaan yang valid."
@@ -65,11 +65,15 @@ Generate only the analysis text."""
         
         try:
             context_text = "\n\n---\n\n".join(relevant_chunks)
+
+            custom_rules = persona_prompt
+            if not custom_rules or not custom_rules.strip():
+                custom_rules = "Tidak ada aturan persona khusus yang ditetapkan oleh perusahaan. Jawab dengan profesional."
             
             prompt = f"""Anda adalah asisten AI customer service yang sangat membantu untuk perusahaan dengan ID '{tenant_id}'. 
 Anda memiliki akses ke knowledge base perusahaan yang telah diproses dengan teknologi agentic chunking.
 
-INSTRUKSI PENTING:
+INSTRUKSI PENTING (TERKUNCI):
 - HANYA gunakan informasi dari konteks knowledge base di bawah ini
 - Berikan jawaban yang lengkap, terstruktur, dan mudah dipahami
 - Jika ada informasi terkait di beberapa bagian konteks, gabungkan dengan logis
@@ -78,16 +82,22 @@ INSTRUKSI PENTING:
 - Berikan contoh konkret jika tersedia dalam konteks
 - Prioritaskan memberikan solusi yang actionable
 
-INSTRUKSI KHUSUS UNTUK GAMBAR:
+INSTRUKSI KHUSUS UNTUK GAMBAR (TERKUNCI):
 - Riwayat chat mungkin berisi analisis gambar dalam format '(Analisis AI: ...)'.
 - Teks ini adalah deskripsi dari gambar yang diunggah user. ANDA HARUS MENGGUNAKANNYA sebagai konteks.
 - JANGAN PERNAH mengatakan 'Saya tidak bisa melihat gambar'. Anggap teks '(Analisis AI: ...)' adalah mata Anda.
 - Jika user bertanya tentang gambar yang baru dianalisis, gunakan teks analisis itu untuk menjawab.
 
+---
+ATURAN PERSONA DARI PERUSAHAAN (DARI DATABASE):
+{custom_rules}
+---
+
 KNOWLEDGE BASE PERUSAHAAN ({tenant_id}):
 {context_text}
 
-PERTANYAAN CUSTOMER: {question}
+RIWAYAT PERCAKAPAN DAN PERTANYAAN TERBARU:
+{question}
 
 JAWABAN CUSTOMER SERVICE:"""
             

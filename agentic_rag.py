@@ -1,5 +1,5 @@
 import os
-from typing import List
+from typing import List, Optional
 from config import AgenticRAGConfig
 from pdf_handler import PDFHandler
 from chunking_manager import ChunkingManager
@@ -66,7 +66,7 @@ class AgenticRAG:
         except Exception as e:
             raise Exception(f"Error processing PDF: {str(e)}")
 
-    def ask(self, question: str) -> str:
+    def ask(self, question: str, persona_prompt: Optional[str] = None) -> str:
         """Ask question and get answer with enhanced retrieval for specific tenant"""
         if not self.query_processor.validate_question(question):
             return "Silakan ajukan pertanyaan yang valid."
@@ -76,7 +76,9 @@ class AgenticRAG:
                 question, self.config.tenant_id
             )
             
-            return self.query_processor.generate_response(question, relevant_chunks, self.config.tenant_id)
+            return self.query_processor.generate_response(
+                question, relevant_chunks, self.config.tenant_id, persona_prompt
+            )
             
         except Exception as e:
             if "rate limit" in str(e).lower() or "429" in str(e):
