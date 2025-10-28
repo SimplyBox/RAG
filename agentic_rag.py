@@ -12,19 +12,14 @@ from llama_index.embeddings.clip import ClipEmbedding
 class AgenticRAG:
     """Main Multi-tenant Agentic RAG class that orchestrates all components"""
     
-    def __init__(self, tenant_id: str = "company_A", pinecone_api_key: str = None, 
-                 groq_api_key: str = None, base_chunk_size: int = 600, 
-                 overlap: int = 50, min_chunk_size: int = 100, max_chunk_size: int = 1200):
+    def __init__(self, tenant_id: str = "SimplyBox", pinecone_api_key: str = None, 
+                 groq_api_key: str = None):
         """Initialize Multi-tenant Agentic RAG with Optimised Grouping"""
         
         self.config = AgenticRAGConfig(
             PINECONE_API_KEY=pinecone_api_key or AgenticRAGConfig.PINECONE_API_KEY,
             GROQ_API_KEY=groq_api_key or AgenticRAGConfig.GROQ_API_KEY,
             tenant_id=tenant_id,
-            base_chunk_size=base_chunk_size,
-            overlap=overlap,
-            min_chunk_size=min_chunk_size,
-            max_chunk_size=max_chunk_size
         )
         
         Settings.llm = Groq(
@@ -43,8 +38,11 @@ class AgenticRAG:
         self.pdf_handler = PDFHandler()
 
         self.chunking_manager = ChunkingManager(
-            base_chunk_size, overlap, min_chunk_size, max_chunk_size,
-            embed_model=Settings.embed_model  # Berikan modelnya
+            base_chunk_size=self.config.base_chunk_size,
+            overlap=self.config.overlap,
+            min_chunk_size=self.config.min_chunk_size,
+            max_chunk_size=self.config.max_chunk_size,
+            embed_model=Settings.embed_model
         )
 
         self.vector_store_manager = VectorStoreManager(self.config)

@@ -6,8 +6,8 @@ from llama_index.core.embeddings import BaseEmbedding
 class ChunkingManager:
     """Manages the advanced chunking process with semantic optimization"""
     
-    def __init__(self, base_chunk_size: int = 600, overlap: int = 50, 
-                 min_chunk_size: int = 100, max_chunk_size: int = 1200,
+    def __init__(self, base_chunk_size: int, overlap: int, 
+                 min_chunk_size: int, max_chunk_size: int,
                  embed_model: BaseEmbedding | None = None):
         
         if not embed_model:
@@ -18,7 +18,6 @@ class ChunkingManager:
         self.min_chunk_size = min_chunk_size
         self.max_chunk_size = max_chunk_size
         self.text_processor = TextProcessor()
-        # Berikan model ke SemanticAnalyzer
         self.semantic_analyzer = SemanticAnalyzer(embed_model=embed_model)
 
     def optimize_chunk_size(self, group_texts: List[str]) -> List[str]:
