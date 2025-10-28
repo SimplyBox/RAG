@@ -102,21 +102,20 @@ class VectorStoreManager:
         """Insert a single image vector into vector store"""
         doc_id = f"{tenant_id}_{category}_{uuid.uuid4().hex[:8]}"
 
-        truncated_analysis = text_analysis
-        if len(truncated_analysis) > 150:
-            truncated_analysis = truncated_analysis[:150] + "..."
-        
+        embed_text = f"Analisis gambar untuk: {source_filename}"
+
         doc = ImageDocument(
             image=image_path,
-            text=truncated_analysis,
+            text=embed_text,
             doc_id=doc_id,
             metadata={
                 "tenant_id": tenant_id,
                 "category": category,
                 "source": source_filename,
                 "type": "image",
-                "text_analysis": text_analysis
-            }
+                "text_analysis": text_analysis 
+            },
+            excluded_embed_metadata_keys=["text_analysis", "tenant_id", "category", "source", "type"]
         )
 
         try:
