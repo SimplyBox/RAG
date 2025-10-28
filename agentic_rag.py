@@ -65,6 +65,43 @@ class AgenticRAG:
             
         except Exception as e:
             raise Exception(f"Error processing PDF: {str(e)}")
+        
+    def upload_image(self, image_path: str, category: str = "General", original_filename: str = None) -> str:
+        """Analyze image, create vector, and upload to vector store"""
+        if category not in self.config.CATEGORIES:
+            print(f"Warning: Category '{category}' not in predefined categories. Using 'General'.")
+            category = "General"
+        
+        source_filename = original_filename if original_filename else os.path.basename(image_path)
+
+        try:
+            print(f"Analyzing image '{source_filename}' for tenant '{self.config.tenant_id}'...")
+            text_analysis = self.query_processor.analyze_image(
+                image_url=None,
+                caption=f"Internal analysis for knowledge base file: {source_filename}",
+                local_image_path=image_path
+            )
+
+            if "[Error:" in text_analysis:
+                raise ValueError(f"Failed to analyze image with Maverick: {text_analysis}")
+
+            print(f"Image analysis complete. Indexing image vector...")
+
+            successful_insert = self.vector_store_manager.insert_image(
+                image_path=image_path,
+                source_filename=source_filename,
+                tenant_id=self.config.tenant_id,
+                category=category,
+                text_analysis=text_analysis
+            )
+
+            if successful_insert == 0:
+                raise ValueError("Failed to insert image vector into Pinecone")
+
+            return f"Successfully uploaded 1/1 image vector for tenant '{self.config.tenant_id}' in category '{category}'"
+            
+        except Exception as e:
+            raise Exception(f"Error processing image: {str(e)}")
 
     def ask(self, question: str, persona_prompt: Optional[str] = None) -> str:
         """Ask question and get answer with enhanced retrieval for specific tenant"""
@@ -90,7 +127,7 @@ class AgenticRAG:
         if not image_url:
             raise ValueError("Image URL is required for analysis")
         
-        return self.query_processor.analyze_image(image_url, caption)
+        return self.query_processor.analyze_image(image_url, caption, local_image_path=None)
         
     def delete_file(self, file_name: str) -> str:
         """Delete all chunks associated with a specific file for the current tenant"""

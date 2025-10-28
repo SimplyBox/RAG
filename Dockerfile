@@ -31,21 +31,26 @@ COPY requirements.ml.txt .
 RUN pip install -r requirements.ml.txt
 
 RUN python -c "print('deps installed OK')"
+
+# --- PERUBAHAN DI SINI ---
 # Prepare model dirs
-RUN mkdir -p /models/hf-cache /models/sbert
+RUN mkdir -p /models/hf-cache /models/clip # Path baru untuk CLIP
 
 # Copy the fetch script (no heredocs; safe on DO builder)
 COPY scripts/fetch_model.py /tmp/fetch_model.py
 
 # Optional: pin a specific commit for deterministic builds (set via build arg)
-ARG SBERT_REV=main
-ENV SBERT_REV=${SBERT_REV}
+ARG CLIP_REV=main # Mengganti SBERT_REV
+ENV CLIP_REV=${CLIP_REV}
+
+# Set ENV VAR untuk fetch_model.py
+ENV CLIP_DEST="/models/clip/clip-ViT-B-32"
 
 # Cache hub data between builds; verbose download; fail-fast if empty
 RUN --mount=type=cache,id=s/35a544df-5187-48e2-9b81-6d9e5ad6e0e1-/root/.cache/huggingface,target=/root/.cache/huggingface \
     HUGGINGFACE_HUB_VERBOSITY=debug \
     python -u /tmp/fetch_model.py && \
-    ls -lah /models/sbert/all-MiniLM-L6-v2 | sed -n '1,80p'
+    ls -lah /models/clip/clip-ViT-B-32 | sed -n '1,80p' # Verifikasi path baru
 
 # Copy source last (benefits from .dockerignore)
 COPY . .
@@ -58,8 +63,7 @@ ENV PIP_NO_CACHE_DIR=1 PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1 \
     HF_HOME="/models/hf-cache" \
     # force offline HF so no network calls at runtime
     HF_HUB_OFFLINE=1 \
-    # app will read this to load embeddings by PATH
-    EMBED_MODEL_LOCAL_PATH="/models/sbert/all-MiniLM-L6-v2"
+    EMBED_MODEL_LOCAL_PATH="/models/clip/clip-ViT-B-32"
 
 WORKDIR /app
 RUN apt-get update && apt-get install -y --no-install-recommends \
@@ -68,7 +72,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 # Bring venv, vendored model, and app
 COPY --from=builder /opt/venv /opt/venv
-COPY --from=builder /models/sbert /models/sbert
+COPY --from=builder /models/clip /models/clip
 COPY --from=builder /app /app
 
 EXPOSE 8000

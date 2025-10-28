@@ -25,10 +25,13 @@ class QueryProcessor:
             print(f"Error initializing LLMs: {e}")
             raise
 
-    def analyze_image(self, image_url: str, caption: str | None) -> str:
+    def analyze_image(self, image_url: str | None, caption: str | None, local_image_path: str | None = None) -> str:
         """Gunakan 'Maverick' (Vision LLM on Groq) untuk menganalisis gambar."""
         if not self.vision_llm:
             return "[Error: Vision agent (Maverick) not initialized.]"
+        
+        if not image_url and not local_image_path:
+            return "[Error: No image URL or local path provided for analysis.]"
             
         try:
             user_prompt = "Analyze this image concisely."
@@ -42,11 +45,11 @@ Example: 'Analysis: A photo of a BNI bank transfer receipt for Rp 500,000.'
 Example: 'Analysis: A minimalist UI/UX design portfolio for a mobile app, dark mode.'
 
 Generate only the analysis text."""
-            
-            # UBAH PANGGILAN FUNGSI INI:
+
             response = self.vision_llm.complete(
                 prompt=f"{system_prompt}\n\n{user_prompt}",
-                image_url=image_url
+                image_url=image_url,
+                local_image_path=local_image_path
             )
             
             return str(response).strip()
@@ -84,9 +87,10 @@ INSTRUKSI PENTING (TERKUNCI):
 
 INSTRUKSI KHUSUS UNTUK GAMBAR (TERKUNCI):
 - Riwayat chat mungkin berisi analisis gambar dalam format '(Analisis AI: ...)'.
-- Teks ini adalah deskripsi dari gambar yang diunggah user. ANDA HARUS MENGGUNAKANNYA sebagai konteks.
-- JANGAN PERNAH mengatakan 'Saya tidak bisa melihat gambar'. Anggap teks '(Analisis AI: ...)' adalah mata Anda.
-- Jika user bertanya tentang gambar yang baru dianalisis, gunakan teks analisis itu untuk menjawab.
+- KNOWLEDGE BASE Anda juga mungkin berisi analisis gambar dari file yang disimpan, dalam format '(Konteks dari Analisis Gambar ...: ...)'.
+- Teks ini adalah deskripsi dari gambar. ANDA HARUS MENGGUNAKAN KEDUA SUMBER ANALISIS GAMBAR INI sebagai konteks.
+- JANGAN PERNAH mengatakan 'Saya tidak bisa melihat gambar'. Anggap teks analisis ini adalah mata Anda.
+- Jika user bertanya tentang gambar (baik yang baru di-upload atau yang ada di knowledge base), gunakan teks analisis itu untuk menjawab.
 
 ---
 ATURAN PERSONA DARI PERUSAHAAN (DARI DATABASE):

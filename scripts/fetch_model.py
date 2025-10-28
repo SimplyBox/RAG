@@ -1,10 +1,9 @@
-# scripts/fetch_models.py
 import os, sys, glob, urllib.request
 from huggingface_hub import snapshot_download
 
-REPO = os.environ.get("SBERT_REPO", "sentence-transformers/all-MiniLM-L6-v2")
-REV  = os.environ.get("SBERT_REV", "main")   # set to a commit hash later for deterministic builds
-DEST = os.environ.get("SBERT_DEST", "/models/sbert/all-MiniLM-L6-v2")
+REPO = os.environ.get("CLIP_REPO", "sentence-transformers/clip-ViT-B-32")
+REV  = os.environ.get("CLIP_REV", "main")
+DEST = os.environ.get("CLIP_DEST", "/models/clip/clip-ViT-B-32")
 
 print("[check] touching https://huggingface.co ...", flush=True)
 with urllib.request.urlopen("https://huggingface.co", timeout=15) as r:
@@ -16,16 +15,6 @@ local = snapshot_download(
     repo_id=REPO,
     revision=REV,
     local_dir=DEST,
-    # allow_patterns=[
-    #     "*.safetensors",
-    #     "config.json",
-    #     "config_sentence_transformers.json",
-    #     "modules.json",
-    #     "data_config.json",
-    #     "tokenizer.*",
-    #     "vocab*",
-    #     "*.txt",
-    # ],
 )
 
 files = [p for p in glob.glob(local + "/**/*", recursive=True) if os.path.isfile(p)]

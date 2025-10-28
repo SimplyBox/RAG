@@ -1,9 +1,9 @@
 import os
 import uuid
 from typing import List, Tuple
-from llama_index.core import VectorStoreIndex, Document, Settings
+from llama_index.core import VectorStoreIndex, Document, ImageDocument, Settings
 from llama_index.vector_stores.pinecone import PineconeVectorStore
-from llama_index.embeddings.huggingface import HuggingFaceEmbedding
+from llama_index.embeddings.clip import ClipEmbedding
 from llama_index.llms.groq import Groq
 import pinecone
 from config import AgenticRAGConfig
@@ -26,9 +26,11 @@ class VectorStoreManager:
             request_timeout=self.config.request_timeout
         )
         
-        Settings.embed_model = HuggingFaceEmbedding(
+        print(f"Initializing Multi-Modal Embedding Model: {self.config.embedding_model}")
+        Settings.embed_model = ClipEmbedding(
             model_name=self.config.embedding_model
         )
+        print(f"Embedding Model Dimension: {self.config.dimension}")
 
     def _setup_vector_store(self):
         """Setup Pinecone vector store and global index"""
@@ -65,6 +67,7 @@ class VectorStoreManager:
                     "category": category,
                     "source": source_filename,
                     "chunk_length": len(chunk),
+                    "type": "text",
                     "processing_method": "agentic_optimized",
                     "chunk_index": i
                 },
@@ -92,9 +95,41 @@ class VectorStoreManager:
 
         print()
         return successful_inserts, len(documents_to_insert)
+    
+    def insert_image(self, image_path: str, source_filename: str, tenant_id: str, 
+                     category: str, text_analysis: str) -> int:
+        """Insert a single image vector into vector store"""
+        doc_id = f"{tenant_id}_{category}_{uuid.uuid4().hex[:8]}"
+        
+        doc = ImageDocument(
+            image=image_path,
+            doc_id=doc_id,
+            metadata={
+                "tenant_id": tenant_id,
+                "category": category,
+                "source": source_filename,
+                "type": "image",
+                "text_analysis": text_analysis
+            }
+        )
+
+        try:
+            vector_store_with_namespace = PineconeVectorStore(
+                pinecone_index=self.pinecone_index,
+                namespace=tenant_id
+            )
+            temp_index = VectorStoreIndex.from_vector_store(vector_store_with_namespace)
+            temp_index.insert(doc)
+            
+            print(f"Successfully inserted image {source_filename} for tenant {tenant_id}")
+            return 1
+            
+        except Exception as e:
+            print(f"Failed to insert image {source_filename}: {str(e)}")
+            return 0
 
     def retrieve_relevant_chunks(self, question: str, tenant_id: str) -> List[str]:
-        """Retrieve relevant chunks for a specific tenant"""
+        """Retrieve relevant text chunks and image analysis"""
         try:
             vector_store_with_namespace = PineconeVectorStore(
                 pinecone_index=self.pinecone_index,
@@ -110,7 +145,17 @@ class VectorStoreManager:
 
             nodes = sorted(nodes, key=lambda x: x.score if hasattr(x, 'score') else 0, reverse=True)
             
-            relevant_chunks = [node.text for node in nodes[:self.config.final_chunks_count]]
+            relevant_chunks = []
+            for node in nodes[:self.config.final_chunks_count]:
+                metadata = node.node.metadata
+                
+                if metadata.get("type") == "image":
+                    analysis = metadata.get("text_analysis", "Analisis gambar, deskripsi tidak tersedia.")
+                    source = metadata.get("source", "sumber-gambar.jpg")
+                    relevant_chunks.append(f"(Konteks dari Analisis Gambar '{source}': {analysis})")
+                else:
+                    relevant_chunks.append(node.node.text)
+            
             return relevant_chunks
             
         except Exception as e:
@@ -132,7 +177,7 @@ class VectorStoreManager:
             
             print(f"DEBUG: Starting delete for file '{file_name}' in tenant '{tenant_id}'")
             
-            dummy_vector = [0.0] * 384
+            dummy_vector = [0.0] * self.config.dimension
             
             all_records_response = self.pinecone_index.query(
                 namespace=tenant_id,

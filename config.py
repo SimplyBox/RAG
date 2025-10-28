@@ -21,8 +21,8 @@ class AgenticRAGConfig:
     max_chunk_size: int = 1200
     
     # Pinecone settings
-    index_name: str = "simplybox"
-    dimension: int = 384
+    index_name: str = "simplybox-multimodal"
+    dimension: int = 512
     metric: str = "cosine"
     cloud: str = "aws"
     region: str = "us-east-1"
@@ -35,8 +35,7 @@ class AgenticRAGConfig:
     request_timeout: float = 120.0
     
     # Embedding model
-    # embedding_model: str = "sentence-transformers/all-MiniLM-L6-v2"
-    embedding_model: str = "/models/sbert/all-MiniLM-L6-v2"
+    embedding_model: str = os.getenv("EMBED_MODEL_LOCAL_PATH", "sentence-transformers/clip-ViT-B-32")
     
     # Retrieval settings
     similarity_top_k: int = 7
@@ -56,7 +55,7 @@ class AgenticRAGConfig:
     }
 
     @classmethod
-    def from_env(cls, tenant_id: str = "company_A"):
+    def from_env(cls, tenant_id: str = "SimplyBox"):
         """Create config from environment variables with tenant ID"""
         pinecone_api_key = os.getenv("PINECONE_API_KEY", "")
         groq_api_key = os.getenv("GROQ_API_KEY", "")

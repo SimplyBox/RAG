@@ -95,33 +95,41 @@ async def ingest_document(
     file_name: str = Form(None)
 ):
     """
-    Ingest PDF document for specific company
+    Ingest PDF or Image document for specific company
     
-    - **file**: PDF file to upload
+    - **file**: PDF, PNG, JPG, JPEG, WEBP file to upload
     - **company_id**: Company identifier (will be used as tenant_id)
     - **category**: Document category (FAQ, Payment, Complaint, Product, Technical, General)
     - **file_name**: Custom filename from frontend (optional, will use original if not provided)
     """
     
-    if not file.filename.lower().endswith('.pdf'):
-        raise HTTPException(status_code=400, detail="Only PDF files are allowed")
+    if not file.filename:
+        raise HTTPException(status_code=400, detail="File has no filename")
+
+    file_ext = os.path.splitext(file.filename)[1].lower()
+    allowed_pdf = ['.pdf']
+    allowed_images = ['.png', '.jpg', '.jpeg', '.webp']
+
+    if file_ext not in allowed_pdf and file_ext not in allowed_images:
+        raise HTTPException(status_code=400, detail=f"Only PDF, PNG, JPG, JPEG, WEBP files are allowed. Got {file_ext}")
     
     if not company_id or not company_id.strip():
         raise HTTPException(status_code=400, detail="company_id is required")
-    
+
     if file_name and file_name.strip():
         original_filename = file_name.strip()
         logger.info(f"Using custom filename from frontend: '{original_filename}'")
     else:
         original_filename = file.filename
-        if original_filename and original_filename.lower().endswith('.pdf'):
-            original_filename = original_filename[:-4]
+        if original_filename:
+            original_filename = os.path.splitext(original_filename)[0]
         logger.info(f"Using original filename: '{original_filename}'")
-    
-    if original_filename and original_filename.lower().endswith('.pdf'):
-        original_filename = original_filename[:-4]
-    
-    logger.info(f"Final filename to be used: '{original_filename}'")
+
+    if original_filename:
+        original_filename = os.path.splitext(original_filename)[0]
+
+    source_filename_with_ext = f"{original_filename}{file_ext}"
+    logger.info(f"Final source filename to be stored: '{source_filename_with_ext}'")
     
     try:
         rag = get_rag_instance(company_id)
@@ -130,27 +138,34 @@ async def ingest_document(
     
     temp_file_path = None
     try:
-        with tempfile.NamedTemporaryFile(delete=False, suffix='.pdf') as temp_file:
+        with tempfile.NamedTemporaryFile(delete=False, suffix=file_ext) as temp_file:
             temp_file_path = temp_file.name
             content = await file.read()
             temp_file.write(content)
         
-        logger.info(f"Processing PDF upload for company {company_id}, category {category}")
-        logger.info(f"Temp file: {temp_file_path}, Original filename: '{original_filename}'")
-        
-        result = rag.upload_pdf(temp_file_path, category, original_filename)
+        logger.info(f"Processing upload for company {company_id}, category {category}")
+        logger.info(f"Temp file: {temp_file_path}, Source filename: '{source_filename_with_ext}'")
         
         chunks_processed = None
-        if "chunks" in result:
-            try:
-                import re
-                match = re.search(r'(\d+)/(\d+)', result)
-                if match:
-                    chunks_processed = int(match.group(1))
-            except:
-                pass
+        result = ""
+
+        if file_ext in allowed_pdf:
+            result = rag.upload_pdf(temp_file_path, category, source_filename_with_ext)
+            if "chunks" in result:
+                try:
+                    import re
+                    match = re.search(r'(\d+)/(\d+)', result)
+                    if match:
+                        chunks_processed = int(match.group(1))
+                except:
+                    pass
         
-        logger.info(f"Successfully processed PDF for company {company_id}: {result}")
+        elif file_ext in allowed_images:
+            result = rag.upload_image(temp_file_path, category, source_filename_with_ext)
+            if "1/1" in result:
+                chunks_processed = 1
+        
+        logger.info(f"Successfully processed upload for company {company_id}: {result}")
         
         return IngestResponse(
             success=True,
@@ -161,8 +176,8 @@ async def ingest_document(
         )
         
     except Exception as e:
-        logger.error(f"Error processing PDF for company {company_id}: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"Error processing PDF: {str(e)}")
+        logger.error(f"Error processing upload for company {company_id}: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Error processing upload: {str(e)}")
     
     finally:
         if temp_file_path and os.path.exists(temp_file_path):
