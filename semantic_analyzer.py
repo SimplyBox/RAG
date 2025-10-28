@@ -2,22 +2,22 @@ import os
 import numpy as np
 from typing import List
 from sklearn.metrics.pairwise import cosine_similarity
-from sentence_transformers import SentenceTransformer
+from llama_index.core.embeddings import BaseEmbedding
 
 class SemanticAnalyzer:
     """Handles semantic analysis and grouping of text units"""
     
-    def __init__(self, model_name: str | None = None):
-        local_path = os.environ.get("EMBED_MODEL_LOCAL_PATH")
-        self.model_id_or_path = local_path or model_name or "sentence-transformers/all-MiniLM-L6-v2"
-        self.sentence_model = SentenceTransformer(self.model_id_or_path)
+    def __init__(self, embed_model: BaseEmbedding | None = None):
+        if not embed_model:
+            raise ValueError("SemanticAnalyzer requires an embedding model.")
+        self.embed_model = embed_model
     
     def calculate_semantic_similarity(self, units: List[str]) -> np.ndarray:
         """Calculate semantic similarity matrix between units"""
         if len(units) < 2:
             return np.array([[1.0]])
-        
-        embeddings = self.sentence_model.encode(units)
+
+        embeddings = self.embed_model.get_text_embedding_batch(units)
         similarity_matrix = cosine_similarity(embeddings)
         return similarity_matrix
 

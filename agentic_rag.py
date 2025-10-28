@@ -5,6 +5,9 @@ from pdf_handler import PDFHandler
 from chunking_manager import ChunkingManager
 from vector_store_manager import VectorStoreManager
 from query_processor import QueryProcessor
+from llama_index.core import Settings
+from llama_index.llms.groq import Groq
+from llama_index.embeddings.clip import ClipEmbedding
 
 class AgenticRAG:
     """Main Multi-tenant Agentic RAG class that orchestrates all components"""
@@ -24,11 +27,28 @@ class AgenticRAG:
             max_chunk_size=max_chunk_size
         )
         
-        self.pdf_handler = PDFHandler()
-        self.chunking_manager = ChunkingManager(
-            base_chunk_size, overlap, min_chunk_size, max_chunk_size
+        Settings.llm = Groq(
+            model=self.config.model_name,
+            api_key=self.config.GROQ_API_KEY,
+            temperature=self.config.temperature,
+            max_tokens=self.config.max_tokens,
+            request_timeout=self.config.request_timeout
         )
+        print(f"Initializing Multi-Modal Embedding Model: {self.config.embedding_model}")
+        Settings.embed_model = ClipEmbedding(
+            model_name=self.config.embedding_model
+        )
+        print(f"Embedding Model Dimension: {self.config.dimension}")
+
+        self.pdf_handler = PDFHandler()
+
+        self.chunking_manager = ChunkingManager(
+            base_chunk_size, overlap, min_chunk_size, max_chunk_size,
+            embed_model=Settings.embed_model  # Berikan modelnya
+        )
+
         self.vector_store_manager = VectorStoreManager(self.config)
+
         self.query_processor = QueryProcessor(self.config)
 
     def upload_pdf(self, pdf_path: str, category: str = "General", original_filename: str = None) -> str:
@@ -65,7 +85,7 @@ class AgenticRAG:
             
         except Exception as e:
             raise Exception(f"Error processing PDF: {str(e)}")
-        
+
     def upload_image(self, image_path: str, category: str = "General", original_filename: str = None) -> str:
         """Analyze image, create vector, and upload to vector store"""
         if category not in self.config.CATEGORIES:
@@ -103,6 +123,7 @@ class AgenticRAG:
         except Exception as e:
             raise Exception(f"Error processing image: {str(e)}")
 
+
     def ask(self, question: str, persona_prompt: Optional[str] = None) -> str:
         """Ask question and get answer with enhanced retrieval for specific tenant"""
         if not self.query_processor.validate_question(question):
@@ -126,7 +147,7 @@ class AgenticRAG:
         """Panggil vision processor ('Maverick') untuk menganalisis gambar."""
         if not image_url:
             raise ValueError("Image URL is required for analysis")
-        
+
         return self.query_processor.analyze_image(image_url, caption, local_image_path=None)
         
     def delete_file(self, file_name: str) -> str:

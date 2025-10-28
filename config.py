@@ -35,7 +35,7 @@ class AgenticRAGConfig:
     request_timeout: float = 120.0
     
     # Embedding model
-    embedding_model: str = os.getenv("EMBED_MODEL_LOCAL_PATH", "sentence-transformers/clip-ViT-B-32")
+    embedding_model: str = "ViT-B/32"
     
     # Retrieval settings
     similarity_top_k: int = 7

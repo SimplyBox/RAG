@@ -1,18 +1,25 @@
 from typing import List
 from text_processor import TextProcessor
 from semantic_analyzer import SemanticAnalyzer
+from llama_index.core.embeddings import BaseEmbedding
 
 class ChunkingManager:
     """Manages the advanced chunking process with semantic optimization"""
     
     def __init__(self, base_chunk_size: int = 600, overlap: int = 50, 
-                 min_chunk_size: int = 100, max_chunk_size: int = 1200):
+                 min_chunk_size: int = 100, max_chunk_size: int = 1200,
+                 embed_model: BaseEmbedding | None = None):
+        
+        if not embed_model:
+            raise ValueError("ChunkingManager requires an embedding model.")
+            
         self.base_chunk_size = base_chunk_size
         self.overlap = overlap
         self.min_chunk_size = min_chunk_size
         self.max_chunk_size = max_chunk_size
         self.text_processor = TextProcessor()
-        self.semantic_analyzer = SemanticAnalyzer()
+        # Berikan model ke SemanticAnalyzer
+        self.semantic_analyzer = SemanticAnalyzer(embed_model=embed_model)
 
     def optimize_chunk_size(self, group_texts: List[str]) -> List[str]:
         """Optimize chunk size based on content type and semantic coherence"""
@@ -71,7 +78,7 @@ class ChunkingManager:
         
         if not semantic_units:
             return self._fallback_chunking(text)
-        
+
         similarity_matrix = self.semantic_analyzer.calculate_semantic_similarity(semantic_units)
         
         groups = self.semantic_analyzer.group_related_units(semantic_units, similarity_matrix)

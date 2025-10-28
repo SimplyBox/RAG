@@ -26,7 +26,7 @@ RUN pip install -r requirements.base.txt
 COPY requirements.torch.txt .
 RUN pip install -r requirements.torch.txt
 
-# 3) ML stack
+# 3) ML stack (sekarang lebih ramping)
 COPY requirements.ml.txt .
 RUN pip install -r requirements.ml.txt
 
@@ -35,43 +35,22 @@ RUN pip install git+https://github.com/openai/CLIP.git
 
 RUN python -c "print('deps installed OK')"
 
-# Prepare model dirs (Ubah sbert ke clip)
-RUN mkdir -p /models/hf-cache /models/clip
-
-# Copy the fetch script
-COPY scripts/fetch_model.py /tmp/fetch_model.py
-
-# Pin model (Ubah SBERT ke CLIP)
-ARG CLIP_REV=main
-ENV CLIP_REV=${CLIP_REV}
-ENV CLIP_REPO="sentence-transformers/clip-ViT-B-32"
-ENV CLIP_DEST="/models/clip/clip-ViT-B-32"
-
-# Cache hub data between builds; verbose download; fail-fast if empty
-RUN --mount=type=cache,id=s/35a544df-5187-48e2-9b81-6d9e5ad6e0e1-/root/.cache/huggingface,target=/root/.cache/huggingface \
-    HUGGINGFACE_HUB_VERBOSITY=debug \
-    python -u /tmp/fetch_model.py && \
-    ls -lah /models/clip/clip-ViT-B-32 | sed -n '1,80p' # Cek path baru
-
-# Copy source last (benefits from .dockerignore)
 COPY . .
 
 # ---------- Final stage ----------
 FROM python:3.11-slim
 ENV PIP_NO_CACHE_DIR=1 PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1 \
     PATH="/opt/venv/bin:$PATH" \
-    HF_HOME="/models/hf-cache" \
-    HF_HUB_OFFLINE=1 \
-    EMBED_MODEL_LOCAL_PATH="/models/clip/clip-ViT-B-32"
+    HF_HOME="/models/hf-cache"
 
 WORKDIR /app
 RUN apt-get update && apt-get install -y --no-install-recommends \
     libgomp1 poppler-utils curl ca-certificates git \
  && rm -rf /var/lib/apt/lists/*
 
-# Bring venv, vendored model, and app
+# Bring venv and app
 COPY --from=builder /opt/venv /opt/venv
-COPY --from=builder /models/clip /models/clip
+
 COPY --from=builder /app /app
 
 EXPOSE 8000
