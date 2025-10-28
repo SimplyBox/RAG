@@ -101,9 +101,14 @@ class VectorStoreManager:
                      category: str, text_analysis: str) -> int:
         """Insert a single image vector into vector store"""
         doc_id = f"{tenant_id}_{category}_{uuid.uuid4().hex[:8]}"
+
+        truncated_analysis = text_analysis
+        if len(truncated_analysis) > 150:
+            truncated_analysis = truncated_analysis[:150] + "..."
         
         doc = ImageDocument(
             image=image_path,
+            text=truncated_analysis,
             doc_id=doc_id,
             metadata={
                 "tenant_id": tenant_id,
