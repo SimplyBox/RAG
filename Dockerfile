@@ -10,7 +10,7 @@ RUN echo "cache-buster=${CACHE_BUSTER}"
 # Minimal build tools (only if needed for wheels)
 ARG APT_SIG=0
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    gcc g++ libgomp1 poppler-utils ca-certificates \
+    gcc g++ libgomp1 poppler-utils ca-certificates git \
  && rm -rf /var/lib/apt/lists/*
 
 # Create venv and install deps in layers to leverage caching
@@ -30,27 +30,28 @@ RUN pip install -r requirements.torch.txt
 COPY requirements.ml.txt .
 RUN pip install -r requirements.ml.txt
 
+# 4) Install CLIP library from GitHub
+RUN pip install git+https://github.com/openai/CLIP.git
+
 RUN python -c "print('deps installed OK')"
 
-# --- PERUBAHAN DI SINI ---
-# Prepare model dirs
-RUN mkdir -p /models/hf-cache /models/clip # Path baru untuk CLIP
+# Prepare model dirs (Ubah sbert ke clip)
+RUN mkdir -p /models/hf-cache /models/clip
 
-# Copy the fetch script (no heredocs; safe on DO builder)
+# Copy the fetch script
 COPY scripts/fetch_model.py /tmp/fetch_model.py
 
-# Optional: pin a specific commit for deterministic builds (set via build arg)
-ARG CLIP_REV=main # Mengganti SBERT_REV
+# Pin model (Ubah SBERT ke CLIP)
+ARG CLIP_REV=main
 ENV CLIP_REV=${CLIP_REV}
-
-# Set ENV VAR untuk fetch_model.py
+ENV CLIP_REPO="sentence-transformers/clip-ViT-B-32"
 ENV CLIP_DEST="/models/clip/clip-ViT-B-32"
 
 # Cache hub data between builds; verbose download; fail-fast if empty
 RUN --mount=type=cache,id=s/35a544df-5187-48e2-9b81-6d9e5ad6e0e1-/root/.cache/huggingface,target=/root/.cache/huggingface \
     HUGGINGFACE_HUB_VERBOSITY=debug \
     python -u /tmp/fetch_model.py && \
-    ls -lah /models/clip/clip-ViT-B-32 | sed -n '1,80p' # Verifikasi path baru
+    ls -lah /models/clip/clip-ViT-B-32 | sed -n '1,80p' # Cek path baru
 
 # Copy source last (benefits from .dockerignore)
 COPY . .
@@ -59,15 +60,13 @@ COPY . .
 FROM python:3.11-slim
 ENV PIP_NO_CACHE_DIR=1 PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1 \
     PATH="/opt/venv/bin:$PATH" \
-    # optional: keep HF cache small / inside container
     HF_HOME="/models/hf-cache" \
-    # force offline HF so no network calls at runtime
     HF_HUB_OFFLINE=1 \
     EMBED_MODEL_LOCAL_PATH="/models/clip/clip-ViT-B-32"
 
 WORKDIR /app
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    libgomp1 poppler-utils curl ca-certificates \
+    libgomp1 poppler-utils curl ca-certificates git \
  && rm -rf /var/lib/apt/lists/*
 
 # Bring venv, vendored model, and app
