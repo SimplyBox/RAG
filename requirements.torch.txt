@@ -1,2 +1,4 @@
 --index-url https://download.pytorch.org/whl/cpu
 torch>=2.5,<3.0
+torchvision>=0.18,<0.19
+torchaudio>=2.5,<3.0
