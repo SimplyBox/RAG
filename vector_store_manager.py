@@ -60,19 +60,22 @@ class VectorStoreManager:
         
         for i, chunk in enumerate(chunks):
             doc_id = f"{tenant_id}_{category}_{uuid.uuid4().hex[:8]}"
+
+            metadata = {
+                "tenant_id": tenant_id,
+                "category": category,
+                "source": source_filename,
+                "chunk_length": len(chunk),
+                "type": "text",
+                "processing_method": "agentic_optimized",
+                "chunk_index": i
+            }
             
             doc = Document(
                 text=chunk,
-                metadata={
-                    "tenant_id": tenant_id,
-                    "category": category,
-                    "source": source_filename,
-                    "chunk_length": len(chunk),
-                    "type": "text",
-                    "processing_method": "agentic_optimized",
-                    "chunk_index": i
-                },
-                doc_id=doc_id
+                metadata=metadata,
+                doc_id=doc_id,
+                excluded_embed_metadata_keys=list(metadata.keys())
             )
             documents_to_insert.append(doc)
 
