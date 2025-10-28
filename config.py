@@ -15,10 +15,10 @@ class AgenticRAGConfig:
     tenant_id: str = "SimplyBox"
     
     # Chunking parameters
-    base_chunk_size: int = 600
-    overlap: int = 50
-    min_chunk_size: int = 100
-    max_chunk_size: int = 1200
+    base_chunk_size: int = 200
+    overlap: int = 20
+    min_chunk_size: int = 50
+    max_chunk_size: int = 256
     
     # Pinecone settings
     index_name: str = "simplybox-multimodal"
