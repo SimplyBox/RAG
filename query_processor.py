@@ -34,17 +34,34 @@ class QueryProcessor:
             return "[Error: No image URL or local path provided for analysis.]"
             
         try:
-            user_prompt = "Analyze this image concisely."
+            user_prompt = "Transcribe all text from this image. If it is a menu, list all items and prices."
             if caption:
-                user_prompt = f"User uploaded this image with the caption: '{caption}'. Analyze the image based on this context."
+                user_prompt = f"User uploaded this image with the caption: '{caption}'. Prioritize transcribing all text (like menu items, prices) from the image."
             
-            system_prompt = """You are an AI assistant. Your task is to analyze the provided image and generate a concise, objective description. 
-This description will be stored in a database as 'internal_analysis' to provide context for future text-based chats. 
-Focus on key objects, themes, text (if any), and overall style.
-Example: 'Analysis: A photo of a BNI bank transfer receipt for Rp 500,000.'
-Example: 'Analysis: A minimalist UI/UX design portfolio for a mobile app, dark mode.'
+            system_prompt = """You are a powerful AI assistant with Optical Character Recognition (OCR) capabilities. 
+Your PRIMARY task is to meticulously transcribe ALL text from the provided image, verbatim.
 
-Generate only the analysis text."""
+INSTRUCTIONS:
+1.  If the image is a menu, document, screenshot, or receipt, transcribe all text content. Preserve the structure, categories, and prices exactly as seen.
+2.  If the image has NO text (e.g., a photograph of a landscape), THEN and ONLY THEN, provide a concise visual description.
+3.  Present the transcribed text clearly.
+
+Example (for a menu):
+Analysis: 
+[TRANSCRIPTION START]
+Makanan
+Mie Hot 15K
+Mie Ramen 17K
+Mie Seafood 16K
+...
+Minuman
+Es Jeruk 15K
+...
+[TRANSCRIPTION END]
+
+Example (for a photo with no text):
+Analysis: A photo of a golden retriever playing in a park with a red ball.
+"""
 
             response = self.vision_llm.complete(
                 prompt=f"{system_prompt}\n\n{user_prompt}",
