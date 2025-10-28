@@ -1,7 +1,7 @@
 import os
 import uuid
 from typing import List, Tuple
-from llama_index.core import VectorStoreIndex, ImageDocument, Settings
+from llama_index.core import VectorStoreIndex, Settings
 from llama_index.core.schema import Document, ImageDocument
 from llama_index.vector_stores.pinecone import PineconeVectorStore
 from llama_index.embeddings.clip import ClipEmbedding
