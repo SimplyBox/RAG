@@ -1,5 +1,5 @@
 import time
-from fastapi import FastAPI, HTTPException, UploadFile, File, Form
+from fastapi import FastAPI, HTTPException, UploadFile, File, Form, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import Optional, Dict, Any
@@ -78,6 +78,38 @@ def get_rag_instance(company_id: str) -> AgenticRAG:
     
     return rag_instances[company_id]
 
+def process_document_background(
+    temp_file_path: str,
+    file_ext: str,
+    company_id: str,
+    category: str,
+    source_filename_with_ext: str
+):
+    """Fungsi ini akan berjalan di background"""
+    try:
+        rag = get_rag_instance(company_id)
+        
+        logger.info(f"[BG Task] Processing upload for company {company_id}, file {source_filename_with_ext}")
+        
+        result = ""
+        if file_ext == '.pdf':
+            result = rag.upload_pdf(temp_file_path, category, source_filename_with_ext)
+        elif file_ext in ['.png', '.jpg', '.jpeg', '.webp']:
+            result = rag.upload_image(temp_file_path, category, source_filename_with_ext)
+        
+        logger.info(f"[BG Task] Successfully processed upload for company {company_id}: {result}")
+        
+    except Exception as e:
+        logger.error(f"[BG Task] Error processing upload for {company_id}: {str(e)}")
+    
+    finally:
+        if temp_file_path and os.path.exists(temp_file_path):
+            try:
+                os.unlink(temp_file_path)
+                logger.info(f"[BG Task] Cleaned up temp file: {temp_file_path}")
+            except Exception as e:
+                logger.error(f"[BG Task] Error cleaning up temp file {temp_file_path}: {e}")
+
 @app.get("/health", response_model=HealthResponse)
 async def health_check():
     """Health check endpoint"""
@@ -89,6 +121,7 @@ async def health_check():
 
 @app.post("/ingest", response_model=IngestResponse)
 async def ingest_document(
+    background_tasks: BackgroundTasks,
     file: UploadFile = File(...),
     company_id: str = Form(...),
     category: str = Form("General"),
@@ -132,7 +165,7 @@ async def ingest_document(
     logger.info(f"Final source filename to be stored: '{source_filename_with_ext}'")
     
     try:
-        rag = get_rag_instance(company_id)
+        get_rag_instance(company_id)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
     
@@ -143,48 +176,32 @@ async def ingest_document(
             content = await file.read()
             temp_file.write(content)
         
-        logger.info(f"Processing upload for company {company_id}, category {category}")
-        logger.info(f"Temp file: {temp_file_path}, Source filename: '{source_filename_with_ext}'")
-        
-        chunks_processed = None
-        result = ""
+        logger.info(f"Queueing background task for company {company_id}, file {source_filename_with_ext}")
 
-        if file_ext in allowed_pdf:
-            result = rag.upload_pdf(temp_file_path, category, source_filename_with_ext)
-            if "chunks" in result:
-                try:
-                    import re
-                    match = re.search(r'(\d+)/(\d+)', result)
-                    if match:
-                        chunks_processed = int(match.group(1))
-                except:
-                    pass
-        
-        elif file_ext in allowed_images:
-            result = rag.upload_image(temp_file_path, category, source_filename_with_ext)
-            if "1/1" in result:
-                chunks_processed = 1
-        
-        logger.info(f"Successfully processed upload for company {company_id}: {result}")
-        
-        return IngestResponse(
-            success=True,
-            message=result,
+        background_tasks.add_task(
+            process_document_background,
+            temp_file_path=temp_file_path,
+            file_ext=file_ext,
             company_id=company_id,
             category=category,
-            chunks_processed=chunks_processed
+            source_filename_with_ext=source_filename_with_ext
         )
+
+        return {
+            "success": True,
+            "message": "Upload accepted and is being processed in the background.",
+            "company_id": company_id,
+            "file_name": source_filename_with_ext
+        }
         
     except Exception as e:
-        logger.error(f"Error processing upload for company {company_id}: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"Error processing upload: {str(e)}")
-    
-    finally:
         if temp_file_path and os.path.exists(temp_file_path):
             try:
                 os.unlink(temp_file_path)
             except:
                 pass
+        logger.error(f"Error queuing upload task for company {company_id}: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Error queuing upload task: {str(e)}")
 
 @app.post("/query", response_model=QueryResponse)
 async def query_documents(request: QueryRequest):
