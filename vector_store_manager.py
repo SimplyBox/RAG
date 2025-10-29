@@ -55,7 +55,7 @@ class VectorStoreManager:
 
     def insert_chunks(self, chunks: List[str], source_filename: str, 
                      tenant_id: str, category: str) -> Tuple[int, int]:
-        """Insert chunks into vector store with namespace and metadata"""
+        """Insert chunks into vector store with namespace and metadata in a batch"""
         documents_to_insert = []
         
         for i, chunk in enumerate(chunks):
@@ -67,7 +67,6 @@ class VectorStoreManager:
                 "source": source_filename,
                 "chunk_length": len(chunk),
                 "type": "text",
-                "processing_method": "agentic_optimized",
                 "chunk_index": i
             }
             
@@ -79,26 +78,29 @@ class VectorStoreManager:
             )
             documents_to_insert.append(doc)
 
-        successful_inserts = 0
-        
-        for doc in documents_to_insert:
-            try:
-                vector_store_with_namespace = PineconeVectorStore(
-                    pinecone_index=self.pinecone_index,
-                    namespace=tenant_id
-                )
-                temp_index = VectorStoreIndex.from_vector_store(vector_store_with_namespace)
-                temp_index.insert(doc)
-                
-                successful_inserts += 1
-                print(f"Inserted chunk {successful_inserts}/{len(documents_to_insert)} for tenant {tenant_id}", end='\r')
-                
-            except Exception as e:
-                print(f"Failed to insert chunk: {str(e)}")
-                continue
+        if not documents_to_insert:
+            return 0, 0
 
-        print()
-        return successful_inserts, len(documents_to_insert)
+        successful_inserts = 0
+        total_to_insert = len(documents_to_insert)
+        
+        try:
+            vector_store_with_namespace = PineconeVectorStore(
+                pinecone_index=self.pinecone_index,
+                namespace=tenant_id
+            )
+            temp_index = VectorStoreIndex.from_vector_store(vector_store_with_namespace)
+
+            print(f"Inserting {total_to_insert} chunks as a batch for tenant {tenant_id}...")
+            temp_index.insert_nodes(documents_to_insert)
+            
+            successful_inserts = total_to_insert
+            print(f"\nSuccessfully inserted batch of {successful_inserts} chunks.")
+            
+        except Exception as e:
+            print(f"Failed to insert batch: {str(e)}")
+
+        return successful_inserts, total_to_insert
     
     def insert_image(self, text_analysis: str, source_filename: str, tenant_id: str, 
                      category: str) -> int:
