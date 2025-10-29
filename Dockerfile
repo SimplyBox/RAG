@@ -30,9 +30,6 @@ RUN pip install -r requirements.torch.txt
 COPY requirements.ml.txt .
 RUN pip install -r requirements.ml.txt
 
-# 4) Install CLIP library from GitHub
-RUN pip install git+https://github.com/openai/CLIP.git
-
 RUN python -c "print('deps installed OK')"
 
 COPY . .

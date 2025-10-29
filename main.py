@@ -36,11 +36,7 @@ def main():
         rag = AgenticRAG(
             tenant_id=config.tenant_id,
             pinecone_api_key=config.PINECONE_API_KEY,
-            groq_api_key=config.GROQ_API_KEY,
-            base_chunk_size=config.base_chunk_size,
-            overlap=config.overlap,
-            min_chunk_size=config.min_chunk_size,
-            max_chunk_size=config.max_chunk_size
+            groq_api_key=config.GROQ_API_KEY
         )
 
         print_help()
@@ -66,7 +62,6 @@ def main():
                     
             elif user_input.lower().startswith("upload "):
                 try:
-                    # Parse upload command: upload <path> [category]
                     parts = user_input[7:].strip().split()
                     if len(parts) < 1:
                         print("❌ Usage: upload <pdf_path> [category]")

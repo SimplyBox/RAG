@@ -50,8 +50,8 @@ Example (for a menu):
 Analysis: 
 [TRANSCRIPTION START]
 Makanan
-Mie Hot 15K
-Mie Ramen 17K
+Mie Goreng 15K
+Nasi Goreng 17K
 Mie Seafood 16K
 ...
 Minuman

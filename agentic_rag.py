@@ -7,7 +7,7 @@ from vector_store_manager import VectorStoreManager
 from query_processor import QueryProcessor
 from llama_index.core import Settings
 from llama_index.llms.groq import Groq
-from llama_index.embeddings.clip import ClipEmbedding
+from llama_index.embeddings.huggingface import HuggingFaceEmbedding
 
 class AgenticRAG:
     """Main Multi-tenant Agentic RAG class that orchestrates all components"""
@@ -29,8 +29,8 @@ class AgenticRAG:
             max_tokens=self.config.max_tokens,
             request_timeout=self.config.request_timeout
         )
-        print(f"Initializing Multi-Modal Embedding Model: {self.config.embedding_model}")
-        Settings.embed_model = ClipEmbedding(
+        print(f"Initializing Text Embedding Model: {self.config.embedding_model}")
+        Settings.embed_model = HuggingFaceEmbedding(
             model_name=self.config.embedding_model
         )
         print(f"Embedding Model Dimension: {self.config.dimension}")
@@ -85,7 +85,7 @@ class AgenticRAG:
             raise Exception(f"Error processing PDF: {str(e)}")
 
     def upload_image(self, image_path: str, category: str = "General", original_filename: str = None) -> str:
-        """Analyze image, create vector, and upload to vector store"""
+        """Analyze image, create vector from *analysis text*, and upload to vector store"""
         if category not in self.config.CATEGORIES:
             print(f"Warning: Category '{category}' not in predefined categories. Using 'General'.")
             category = "General"
@@ -103,20 +103,19 @@ class AgenticRAG:
             if "[Error:" in text_analysis:
                 raise ValueError(f"Failed to analyze image with Maverick: {text_analysis}")
 
-            print(f"Image analysis complete. Indexing image vector...")
+            print(f"Image analysis complete. Indexing image analysis text...")
 
             successful_insert = self.vector_store_manager.insert_image(
-                image_path=image_path,
+                text_analysis=text_analysis,
                 source_filename=source_filename,
                 tenant_id=self.config.tenant_id,
-                category=category,
-                text_analysis=text_analysis
+                category=category
             )
 
             if successful_insert == 0:
-                raise ValueError("Failed to insert image vector into Pinecone")
+                raise ValueError("Failed to insert image analysis text into Pinecone")
 
-            return f"Successfully uploaded 1/1 image vector for tenant '{self.config.tenant_id}' in category '{category}'"
+            return f"Successfully uploaded 1/1 image analysis text vector for tenant '{self.config.tenant_id}' in category '{category}'"
             
         except Exception as e:
             raise Exception(f"Error processing image: {str(e)}")

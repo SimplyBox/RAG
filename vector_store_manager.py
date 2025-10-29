@@ -2,9 +2,9 @@ import os
 import uuid
 from typing import List, Tuple
 from llama_index.core import VectorStoreIndex, Settings
-from llama_index.core.schema import Document, ImageDocument
+from llama_index.core.schema import Document
 from llama_index.vector_stores.pinecone import PineconeVectorStore
-from llama_index.embeddings.clip import ClipEmbedding
+from llama_index.embeddings.huggingface import HuggingFaceEmbedding
 from llama_index.llms.groq import Groq
 import pinecone
 from config import AgenticRAGConfig
@@ -27,8 +27,8 @@ class VectorStoreManager:
             request_timeout=self.config.request_timeout
         )
         
-        print(f"Initializing Multi-Modal Embedding Model: {self.config.embedding_model}")
-        Settings.embed_model = ClipEmbedding(
+        print(f"Initializing Text Embedding Model: {self.config.embedding_model}")
+        Settings.embed_model = HuggingFaceEmbedding(
             model_name=self.config.embedding_model
         )
         print(f"Embedding Model Dimension: {self.config.dimension}")
@@ -100,25 +100,26 @@ class VectorStoreManager:
         print()
         return successful_inserts, len(documents_to_insert)
     
-    def insert_image(self, image_path: str, source_filename: str, tenant_id: str, 
-                     category: str, text_analysis: str) -> int:
-        """Insert a single image vector into vector store"""
+    def insert_image(self, text_analysis: str, source_filename: str, tenant_id: str, 
+                     category: str) -> int:
+        """Insert a single image *analysis text* into vector store"""
         doc_id = f"{tenant_id}_{category}_{uuid.uuid4().hex[:8]}"
 
-        embed_text = f"Analisis gambar untuk: {source_filename}"
+        formatted_text = f"(Konteks dari Analisis Gambar '{source_filename}': {text_analysis})"
 
-        doc = ImageDocument(
-            image=image_path,
-            text=embed_text,
+        metadata = {
+            "tenant_id": tenant_id,
+            "category": category,
+            "source": source_filename,
+            "type": "image_analysis",
+            "chunk_length": len(formatted_text)
+        }
+        
+        doc = Document(
+            text=formatted_text,
             doc_id=doc_id,
-            metadata={
-                "tenant_id": tenant_id,
-                "category": category,
-                "source": source_filename,
-                "type": "image",
-                "text_analysis": text_analysis 
-            },
-            excluded_embed_metadata_keys=["text_analysis", "tenant_id", "category", "source", "type"]
+            metadata=metadata,
+            excluded_embed_metadata_keys=list(metadata.keys())
         )
 
         try:
@@ -129,15 +130,15 @@ class VectorStoreManager:
             temp_index = VectorStoreIndex.from_vector_store(vector_store_with_namespace)
             temp_index.insert(doc)
             
-            print(f"Successfully inserted image {source_filename} for tenant {tenant_id}")
+            print(f"Successfully inserted image analysis text {source_filename} for tenant {tenant_id}")
             return 1
             
         except Exception as e:
-            print(f"Failed to insert image {source_filename}: {str(e)}")
+            print(f"Failed to insert image analysis text {source_filename}: {str(e)}")
             return 0
 
     def retrieve_relevant_chunks(self, question: str, tenant_id: str) -> List[str]:
-        """Retrieve relevant text chunks and image analysis"""
+        """Retrieve relevant text chunks and image analysis text"""
         try:
             vector_store_with_namespace = PineconeVectorStore(
                 pinecone_index=self.pinecone_index,
@@ -155,14 +156,7 @@ class VectorStoreManager:
             
             relevant_chunks = []
             for node in nodes[:self.config.final_chunks_count]:
-                metadata = node.node.metadata
-                
-                if metadata.get("type") == "image":
-                    analysis = metadata.get("text_analysis", "Analisis gambar, deskripsi tidak tersedia.")
-                    source = metadata.get("source", "sumber-gambar.jpg")
-                    relevant_chunks.append(f"(Konteks dari Analisis Gambar '{source}': {analysis})")
-                else:
-                    relevant_chunks.append(node.node.text)
+                relevant_chunks.append(node.node.text)
             
             return relevant_chunks
             

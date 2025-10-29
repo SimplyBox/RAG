@@ -15,14 +15,14 @@ class AgenticRAGConfig:
     tenant_id: str = "SimplyBox"
     
     # Chunking parameters
-    base_chunk_size: int = 200
-    overlap: int = 20
-    min_chunk_size: int = 50
-    max_chunk_size: int = 256
+    base_chunk_size: int = 512
+    overlap: int = 50
+    min_chunk_size: int = 100
+    max_chunk_size: int = 1024
     
     # Pinecone settings
-    index_name: str = "simplybox-multimodal"
-    dimension: int = 512
+    index_name: str = "simplybox"
+    dimension: int = 1024
     metric: str = "cosine"
     cloud: str = "aws"
     region: str = "us-east-1"
@@ -35,7 +35,7 @@ class AgenticRAGConfig:
     request_timeout: float = 120.0
     
     # Embedding model
-    embedding_model: str = "ViT-B/32"
+    embedding_model: str = "BAAI/bge-m3"
     
     # Retrieval settings
     similarity_top_k: int = 7
