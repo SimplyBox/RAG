@@ -47,7 +47,6 @@ class IngestResponse(BaseModel):
     message: str
     company_id: str
     category: str
-    chunks_processed: Optional[int] = None
 
 class QueryResponse(BaseModel):
     success: bool
@@ -103,6 +102,7 @@ def process_document_background(
         logger.error(f"[BG Task] Error processing upload for {company_id}: {str(e)}")
     
     finally:
+        # Selalu hapus file temp setelah selesai
         if temp_file_path and os.path.exists(temp_file_path):
             try:
                 os.unlink(temp_file_path)
@@ -191,7 +191,7 @@ async def ingest_document(
             "success": True,
             "message": "Upload accepted and is being processed in the background.",
             "company_id": company_id,
-            "file_name": source_filename_with_ext
+            "category": category,
         }
         
     except Exception as e:
