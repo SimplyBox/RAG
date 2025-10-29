@@ -180,7 +180,7 @@ class VectorStoreManager:
             print(f"DEBUG: Starting delete for file '{file_name}' in tenant '{tenant_id}'")
             
             dummy_vector = [0.0] * self.config.dimension
-            
+
             all_records_response = self.pinecone_index.query(
                 namespace=tenant_id,
                 vector=dummy_vector,
@@ -191,36 +191,27 @@ class VectorStoreManager:
             print(f"DEBUG: Total records in namespace '{tenant_id}': {len(all_records_response.matches)}")
             
             source_files = {}
+            matches_to_delete = []
+
             for match in all_records_response.matches:
-                if match.metadata and 'source' in match.metadata:
-                    source_value = match.metadata['source']
-                    if source_value not in source_files:
-                        source_files[source_value] = 0
-                    source_files[source_value] += 1
+                if not match.metadata or 'source' not in match.metadata:
+                    continue
+                    
+                source_value = match.metadata['source']
+                
+                if source_value not in source_files:
+                    source_files[source_value] = 0
+                source_files[source_value] += 1
+
+                source_base_name = os.path.splitext(source_value)[0]
+
+                if source_value == file_name or source_base_name == file_name:
+                    matches_to_delete.append(match)
             
             print(f"DEBUG: Available source files: {list(source_files.keys())}")
             print(f"DEBUG: Looking for file: '{file_name}'")
-            
-            exact_match_response = self.pinecone_index.query(
-                namespace=tenant_id,
-                vector=dummy_vector,
-                filter={"source": {"$eq": file_name}},
-                top_k=10000,
-                include_metadata=True
-            )
-            
-            print(f"DEBUG: Exact match filter found: {len(exact_match_response.matches)} records")
-            
-            matches_to_delete = exact_match_response.matches
 
-            if not matches_to_delete:
-                print("DEBUG: No exact matches, trying manual filtering...")
-                matches_to_delete = []
-                for match in all_records_response.matches:
-                    if match.metadata and match.metadata.get('source') == file_name:
-                        matches_to_delete.append(match)
-                
-                print(f"DEBUG: Manual filtering found: {len(matches_to_delete)} records")
+            print(f"DEBUG: Filtering logic found: {len(matches_to_delete)} records")
             
             if not matches_to_delete:
                 return f"No documents found for file '{file_name}' in tenant '{tenant_id}'. Available files: {list(source_files.keys())}"
@@ -241,17 +232,15 @@ class VectorStoreManager:
                 print(f"DEBUG: Deleted batch {i//batch_size + 1}, {len(batch_ids)} records")
             
             time.sleep(3)
-            
-            verify_response = self.pinecone_index.query(
-                namespace=tenant_id,
-                vector=dummy_vector,
-                filter={"source": {"$eq": file_name}},
-                top_k=100,
-                include_metadata=True
-            )
-            
-            remaining_count = len(verify_response.matches)
-            print(f"DEBUG: Records remaining after deletion: {remaining_count}")
+
+            if ids_to_delete:
+                verify_response = self.pinecone_index.fetch(ids=ids_to_delete[:100], namespace=tenant_id)
+                remaining_count = len(verify_response.get('vectors', {}))
+                print(f"DEBUG: Records remaining after deletion (checked {len(ids_to_delete[:100])} IDs): {remaining_count}")
+            else:
+                remaining_count = 0
+                print("DEBUG: No records to delete, skipping verification.")
+
             
             if remaining_count > 0:
                 return f"Partially deleted. {deleted_count} deleted, {remaining_count} remaining for file '{file_name}'"
