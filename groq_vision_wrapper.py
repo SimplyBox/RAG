@@ -1,7 +1,8 @@
-from groq import Groq
+from groq import AsyncGroq
 import base64
 import mimetypes
 import os
+import aiofiles
 
 class GroqVisionWrapper:
     """
@@ -10,10 +11,10 @@ class GroqVisionWrapper:
     """
 
     def __init__(self, api_key: str, model: str = "llama-3.2-11b-vision-preview"):
-        self.client = Groq(api_key=api_key)
+        self.client = AsyncGroq(api_key=api_key)
         self.model = model
 
-    def complete(self, prompt: str, image_url: str | None = None, local_image_path: str | None = None):
+    async def complete_async(self, prompt: str, image_url: str | None = None, local_image_path: str | None = None):
         """Kirim prompt + (opsional) image_url ATAU local_image_path ke Groq Vision model."""
         content = [{"type": "text", "text": prompt}]
         
@@ -47,7 +48,7 @@ class GroqVisionWrapper:
             except Exception as e:
                 print(f"Error encoding local image to base64: {e}")
 
-        response = self.client.chat.completions.create(
+        response = await self.client.chat.completions.create(
             model=self.model,
             messages=[{"role": "user", "content": content}],
         )

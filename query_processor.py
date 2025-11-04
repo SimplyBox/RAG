@@ -25,8 +25,8 @@ class QueryProcessor:
             print(f"Error initializing LLMs: {e}")
             raise
 
-    def analyze_image(self, image_url: str | None, caption: str | None, local_image_path: str | None = None) -> str:
-        """Gunakan 'Maverick' (Vision LLM on Groq) untuk menganalisis gambar."""
+    async def analyze_image_async(self, image_url: str | None, caption: str | None, local_image_path: str | None = None) -> str:
+        """Gunakan 'Maverick' (Vision LLM on Groq) untuk menganalisis gambar (versi async)."""
         if not self.vision_llm:
             return "[Error: Vision agent (Maverick) not initialized.]"
         
@@ -63,7 +63,7 @@ Example (for a photo with no text):
 Analysis: A photo of a golden retriever playing in a park with a red ball.
 """
 
-            response = self.vision_llm.complete(
+            response = await self.vision_llm.complete_async(
                 prompt=f"{system_prompt}\n\n{user_prompt}",
                 image_url=image_url,
                 local_image_path=local_image_path
@@ -75,8 +75,8 @@ Analysis: A photo of a golden retriever playing in a park with a red ball.
             print(f"Error during image analysis: {e}")
             return f"[Error analyzing image: {e}]"
 
-    def generate_response(self, question: str, relevant_chunks: List[str], tenant_id: str, persona_prompt: Optional[str] = None) -> str:
-        """Generate response based on question and relevant chunks for specific tenant"""
+    async def generate_response_async(self, question: str, relevant_chunks: List[str], tenant_id: str, persona_prompt: Optional[str] = None) -> str:
+        """Generate response based on question and relevant chunks (versi async)"""
         if not question.strip():
             return "Silakan ajukan pertanyaan yang valid."
 
@@ -121,9 +121,8 @@ RIWAYAT PERCAKAPAN DAN PERTANYAAN TERBARU:
 {question}
 
 JAWABAN CUSTOMER SERVICE:"""
-            
-            time.sleep(1)
-            response = self.text_llm.complete(prompt)
+
+            response = await self.text_llm.acomplete(prompt)
             response_text = str(response).strip()
             
             if len(response_text) < 20:
@@ -132,6 +131,27 @@ JAWABAN CUSTOMER SERVICE:"""
             return response_text
             
         except Exception as e:
+            if "rate limit" in str(e).lower() or "429" in str(e):
+                return "Terlalu banyak permintaan. Silakan tunggu beberapa detik dan coba lagi."
+            return f"Terjadi kesalahan saat memproses pertanyaan: {str(e)}"
+
+    def analyze_image(self, image_url: str | None, caption: str | None, local_image_path: str | None = None) -> str:
+        """Gunakan 'Maverick' (Vision LLM on Groq) untuk menganalisis gambar."""
+        import asyncio
+        try:
+            return asyncio.run(self.analyze_image_async(image_url, caption, local_image_path))
+        except Exception as e:
+            print(f"Error running sync-over-async analyze_image: {e}")
+            return f"[Error analyzing image: {e}]"
+
+
+    def generate_response(self, question: str, relevant_chunks: List[str], tenant_id: str, persona_prompt: Optional[str] = None) -> str:
+        """Generate response based on question and relevant chunks for specific tenant"""
+        import asyncio
+        try:
+            return asyncio.run(self.generate_response_async(question, relevant_chunks, tenant_id, persona_prompt))
+        except Exception as e:
+            print(f"Error running sync-over-async generate_response: {e}")
             if "rate limit" in str(e).lower() or "429" in str(e):
                 return "Terlalu banyak permintaan. Silakan tunggu beberapa detik dan coba lagi."
             return f"Terjadi kesalahan saat memproses pertanyaan: {str(e)}"

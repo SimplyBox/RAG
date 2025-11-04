@@ -120,6 +120,31 @@ class AgenticRAG:
         except Exception as e:
             raise Exception(f"Error processing image: {str(e)}")
 
+    async def ask_async(self, question: str, persona_prompt: Optional[str] = None) -> str:
+        """Ask question and get answer (versi async untuk FastAPI)"""
+        if not self.query_processor.validate_question(question):
+            return "Silakan ajukan pertanyaan yang valid."
+
+        try:
+            relevant_chunks = await self.vector_store_manager.retrieve_relevant_chunks_async(
+                question, self.config.tenant_id
+            )
+            
+            return await self.query_processor.generate_response_async(
+                question, relevant_chunks, self.config.tenant_id, persona_prompt
+            )
+            
+        except Exception as e:
+            if "rate limit" in str(e).lower() or "429" in str(e):
+                return "Terlalu banyak permintaan. Silakan tunggu beberapa detik dan coba lagi."
+            return f"Terjadi kesalahan saat memproses pertanyaan: {str(e)}"
+        
+    async def analyze_image_with_maverick_async(self, image_url: str, caption: str | None) -> str:
+        """Panggil vision processor ('Maverick') (versi async untuk FastAPI)"""
+        if not image_url:
+            raise ValueError("Image URL is required for analysis")
+
+        return await self.query_processor.analyze_image_async(image_url, caption, local_image_path=None)
 
     def ask(self, question: str, persona_prompt: Optional[str] = None) -> str:
         """Ask question and get answer with enhanced retrieval for specific tenant"""

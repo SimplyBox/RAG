@@ -139,8 +139,8 @@ class VectorStoreManager:
             print(f"Failed to insert image analysis text {source_filename}: {str(e)}")
             return 0
 
-    def retrieve_relevant_chunks(self, question: str, tenant_id: str) -> List[str]:
-        """Retrieve relevant text chunks and image analysis text"""
+    async def retrieve_relevant_chunks_async(self, question: str, tenant_id: str) -> List[str]:
+        """Retrieve relevant text chunks and image analysis text (versi async)"""
         try:
             vector_store_with_namespace = PineconeVectorStore(
                 pinecone_index=self.pinecone_index,
@@ -149,7 +149,7 @@ class VectorStoreManager:
             tenant_index = VectorStoreIndex.from_vector_store(vector_store_with_namespace)
             
             retriever = tenant_index.as_retriever(similarity_top_k=self.config.similarity_top_k)
-            nodes = retriever.retrieve(question)
+            nodes = await retriever.aretrieve(question)
             
             if not nodes:
                 return []
@@ -164,6 +164,15 @@ class VectorStoreManager:
             
         except Exception as e:
             print(f"Error retrieving chunks for tenant {tenant_id}: {str(e)}")
+            return []
+
+    def retrieve_relevant_chunks(self, question: str, tenant_id: str) -> List[str]:
+        """Retrieve relevant text chunks and image analysis text"""
+        import asyncio
+        try:
+            return asyncio.run(self.retrieve_relevant_chunks_async(question, tenant_id))
+        except Exception as e:
+            print(f"Error running sync-over-async retrieve_relevant_chunks: {e}")
             return []
 
     def delete_tenant_data(self, tenant_id: str) -> str:

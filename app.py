@@ -102,7 +102,6 @@ def process_document_background(
         logger.error(f"[BG Task] Error processing upload for {company_id}: {str(e)}")
     
     finally:
-        # Selalu hapus file temp setelah selesai
         if temp_file_path and os.path.exists(temp_file_path):
             try:
                 os.unlink(temp_file_path)
@@ -226,8 +225,8 @@ async def query_documents(request: QueryRequest):
     
     try:
         logger.info(f"Processing query for company {request.company_id}: {request.question}")
-        
-        answer = rag.ask(request.question, request.persona_prompt)
+
+        answer = await rag.ask_async(request.question, request.persona_prompt)
         
         logger.info(f"Successfully generated answer for company {request.company_id}")
         
@@ -259,8 +258,8 @@ async def analyze_image_endpoint(request: AnalyzeImageRequest):
     
     try:
         logger.info(f"Processing image analysis for company {request.company_id}...")
-        
-        analysis_text = rag.analyze_image_with_maverick(request.image_url, request.caption)
+
+        analysis_text = await rag.analyze_image_with_maverick_async(request.image_url, request.caption)
         
         logger.info(f"Successfully generated image analysis for company {request.company_id}")
         
